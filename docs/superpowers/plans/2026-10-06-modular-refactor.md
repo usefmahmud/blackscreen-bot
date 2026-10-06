@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Restructure the flat `bot.py`/`processor.py` scripts into a `blackscreen_bot/` package of small single-responsibility modules with one-way imports, zero import-time side effects, and byte-identical runtime behavior.
+**Goal:** Restructure the flat `bot.py`/`processor.py` scripts into a `bbot/` package of small single-responsibility modules with one-way imports, zero import-time side effects, and byte-identical runtime behavior.
 
 **Architecture:** 11-file package. Leaf modules (`config`, `errors`, `models`) hold data/config only; core modules (`links`, `download`, `video`) hold pure processing logic and never import Telegram; the bot layer (`jobs` → `handlers` → `app` → `__main__`) wires everything together. All configuration flows through a frozen `Settings` dataclass passed by parameter — no module-level globals.
 
@@ -17,7 +17,7 @@
 - **Zero import-time side effects:** no env reads, no `load_dotenv()`, no `logging.basicConfig`, no semaphore creation at import time — env is read only when `main()` runs (spec: Dependency rule).
 - **`DEFAULT_SIZE = (1280, 720)` defined once in `config.py`**; `video.make_black_video` takes `default_size` as a required parameter (spec: config.py / video.py).
 - **`import yt_dlp` stays lazy** inside `download_audio()`, documented in the docstring (spec: download.py).
-- **Entrypoint:** `python -m blackscreen_bot`. Old `bot.py`, `processor.py`, `main.py` deleted in Task 6 (spec: Target structure).
+- **Entrypoint:** `python -m bbot`. Old `bot.py`, `processor.py`, `main.py` deleted in Task 6 (spec: Target structure).
 - **No test suite** — verification = compile / clean-env import / wiring / grep checks only (spec: Verification).
 - **No new features, no message-text changes, no `pyproject.toml`, no README changes** (spec: Out of scope).
 - Run all commands from the repo root `/Users/usefmahmud/Documents/programming/python/blackscreen-bot` using `.venv/bin/python`.
@@ -29,10 +29,10 @@
 
 **Files:**
 - Create: `.gitignore`
-- Create: `blackscreen_bot/__init__.py`
-- Create: `blackscreen_bot/errors.py`
-- Create: `blackscreen_bot/models.py`
-- Create: `blackscreen_bot/config.py`
+- Create: `bbot/__init__.py`
+- Create: `bbot/errors.py`
+- Create: `bbot/models.py`
+- Create: `bbot/config.py`
 
 **Interfaces:**
 - Consumes: nothing (first task).
@@ -55,7 +55,7 @@ Expected: `git log` shows one commit.
 
 - [ ] **Step 2: Create package marker**
 
-Create `blackscreen_bot/__init__.py`:
+Create `bbot/__init__.py`:
 
 ```python
 """blackscreen-bot: turn media and social links into black-screen videos."""
@@ -63,7 +63,7 @@ Create `blackscreen_bot/__init__.py`:
 
 - [ ] **Step 3: Create `errors.py`**
 
-Create `blackscreen_bot/errors.py`:
+Create `bbot/errors.py`:
 
 ```python
 """Exceptions shared across the package."""
@@ -77,7 +77,7 @@ class ProcessingError(Exception):
 
 - [ ] **Step 4: Create `models.py`**
 
-Create `blackscreen_bot/models.py`:
+Create `bbot/models.py`:
 
 ```python
 """Plain data types shared across the package. No logic in here."""
@@ -103,7 +103,7 @@ class MediaInfo:
 
 - [ ] **Step 5: Create `config.py`**
 
-Create `blackscreen_bot/config.py`:
+Create `bbot/config.py`:
 
 ```python
 """Configuration: a frozen Settings object built from environment variables.
@@ -164,8 +164,8 @@ class Settings:
 - [ ] **Step 6: Verify compile + zero side effects**
 
 ```bash
-.venv/bin/python -m compileall -q blackscreen_bot && echo COMPILE_OK
-env -u BOT_TOKEN -u ALLOWED_USER_IDS .venv/bin/python -c "import blackscreen_bot, blackscreen_bot.config, blackscreen_bot.errors, blackscreen_bot.models; print('IMPORT_OK')"
+.venv/bin/python -m compileall -q bbot && echo COMPILE_OK
+env -u BOT_TOKEN -u ALLOWED_USER_IDS .venv/bin/python -c "import bbot, bbot.config, bbot.errors, bbot.models; print('IMPORT_OK')"
 ```
 
 Expected: `COMPILE_OK` then `IMPORT_OK`, no other output, exit code 0 (proves no env read at import time).
@@ -173,7 +173,7 @@ Expected: `COMPILE_OK` then `IMPORT_OK`, no other output, exit code 0 (proves no
 - [ ] **Step 7: Commit**
 
 ```bash
-git add blackscreen_bot/ .gitignore
+git add bbot/ .gitignore
 git commit -m "Add package skeleton: config, errors, models"
 ```
 
@@ -182,9 +182,9 @@ git commit -m "Add package skeleton: config, errors, models"
 ### Task 2: Core modules (`links`, `download`, `video`)
 
 **Files:**
-- Create: `blackscreen_bot/links.py`
-- Create: `blackscreen_bot/download.py`
-- Create: `blackscreen_bot/video.py`
+- Create: `bbot/links.py`
+- Create: `bbot/download.py`
+- Create: `bbot/video.py`
 
 **Interfaces:**
 - Consumes: `models.Link`, `models.MediaInfo`, `errors.ProcessingError`, `config.DEFAULT_SIZE` (Task 1).
@@ -196,7 +196,7 @@ git commit -m "Add package skeleton: config, errors, models"
 
 - [ ] **Step 1: Create `links.py`**
 
-Create `blackscreen_bot/links.py`:
+Create `bbot/links.py`:
 
 ```python
 """Detect social-media links in free text and classify their platform."""
@@ -206,7 +206,7 @@ from __future__ import annotations
 import re
 from urllib.parse import urlparse
 
-from blackscreen_bot.models import Link
+from bbot.models import Link
 
 PLATFORMS = {
     "Facebook": ("facebook.com", "fb.watch", "fb.com"),
@@ -238,20 +238,20 @@ def detect_links(text: str) -> list[Link]:
 
 - [ ] **Step 2: Create `download.py`**
 
-Create `blackscreen_bot/download.py`:
+Create `bbot/download.py`:
 
 ```python
 """Download the audio track of a URL with yt-dlp (blocking - run in a thread).
 
 yt_dlp is imported lazily inside download_audio(): it is a heavy dependency
-and keeping it out of module scope keeps `python -m blackscreen_bot` startup fast.
+and keeping it out of module scope keeps `python -m bbot` startup fast.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from blackscreen_bot.errors import ProcessingError
+from bbot.errors import ProcessingError
 
 
 def download_audio(
@@ -292,7 +292,7 @@ def download_audio(
 
 - [ ] **Step 3: Create `video.py`**
 
-Create `blackscreen_bot/video.py`:
+Create `bbot/video.py`:
 
 ```python
 """Probe media files and build the black-screen video with ffprobe/ffmpeg.
@@ -306,8 +306,8 @@ import json
 import subprocess
 from pathlib import Path
 
-from blackscreen_bot.errors import ProcessingError
-from blackscreen_bot.models import MediaInfo
+from bbot.errors import ProcessingError
+from bbot.models import MediaInfo
 
 
 def probe(path: Path) -> MediaInfo:
@@ -383,10 +383,10 @@ def make_black_video(
 - [ ] **Step 4: Verify compile, clean-env import, and link detection smoke check**
 
 ```bash
-.venv/bin/python -m compileall -q blackscreen_bot && echo COMPILE_OK
+.venv/bin/python -m compileall -q bbot && echo COMPILE_OK
 env -u BOT_TOKEN -u ALLOWED_USER_IDS .venv/bin/python -c "
-import blackscreen_bot.links, blackscreen_bot.download, blackscreen_bot.video
-from blackscreen_bot.links import detect_links
+import bbot.links, bbot.download, bbot.video
+from bbot.links import detect_links
 found = detect_links('watch https://x.com/foo/status/1 and www.instagram.com/p/abc')
 assert [(l.platform, l.url) for l in found] == [
     ('X', 'https://x.com/foo/status/1'),
@@ -401,7 +401,7 @@ Expected: `COMPILE_OK` then `CORE_OK`.
 - [ ] **Step 5: Verify core modules are Telegram-free**
 
 ```bash
-grep -rnE "^[[:space:]]*(import telegram|from telegram)" blackscreen_bot/config.py blackscreen_bot/errors.py blackscreen_bot/models.py blackscreen_bot/links.py blackscreen_bot/download.py blackscreen_bot/video.py && echo "FAIL: telegram import in core" || echo "CORE_TG_FREE_OK"
+grep -rnE "^[[:space:]]*(import telegram|from telegram)" bbot/config.py bbot/errors.py bbot/models.py bbot/links.py bbot/download.py bbot/video.py && echo "FAIL: telegram import in core" || echo "CORE_TG_FREE_OK"
 ```
 
 Expected: `CORE_TG_FREE_OK`.
@@ -409,7 +409,7 @@ Expected: `CORE_TG_FREE_OK`.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add blackscreen_bot/
+git add bbot/
 git commit -m "Add core modules: link detection, yt-dlp download, ffmpeg video"
 ```
 
@@ -418,7 +418,7 @@ git commit -m "Add core modules: link detection, yt-dlp download, ffmpeg video"
 ### Task 3: Job orchestration (`jobs.py`)
 
 **Files:**
-- Create: `blackscreen_bot/jobs.py`
+- Create: `bbot/jobs.py`
 
 **Interfaces:**
 - Consumes: `config.Settings`, `errors.ProcessingError`, `video.make_black_video` (Tasks 1–2); Telegram `Message`, `BadRequest`, `ChatAction`.
@@ -428,7 +428,7 @@ git commit -m "Add core modules: link detection, yt-dlp download, ffmpeg video"
 
 - [ ] **Step 1: Create `jobs.py`**
 
-Create `blackscreen_bot/jobs.py`:
+Create `bbot/jobs.py`:
 
 ```python
 """Run one conversion job end to end: queue, fetch, convert, upload.
@@ -450,9 +450,9 @@ from telegram import Message
 from telegram.constants import ChatAction
 from telegram.error import BadRequest
 
-from blackscreen_bot.config import Settings
-from blackscreen_bot.errors import ProcessingError
-from blackscreen_bot.video import make_black_video
+from bbot.config import Settings
+from bbot.errors import ProcessingError
+from bbot.video import make_black_video
 
 log = logging.getLogger("blackscreen-bot")
 
@@ -519,10 +519,10 @@ class JobRunner:
 - [ ] **Step 2: Verify compile + clean-env import**
 
 ```bash
-.venv/bin/python -m compileall -q blackscreen_bot && echo COMPILE_OK
+.venv/bin/python -m compileall -q bbot && echo COMPILE_OK
 env -u BOT_TOKEN -u ALLOWED_USER_IDS .venv/bin/python -c "
-import blackscreen_bot.jobs
-from blackscreen_bot.jobs import Fetch, JobRunner
+import bbot.jobs
+from bbot.jobs import Fetch, JobRunner
 import dataclasses, asyncio
 fields = {f.name for f in dataclasses.fields(JobRunner)}
 assert fields == {'settings', 'semaphore'}, fields
@@ -535,7 +535,7 @@ Expected: `COMPILE_OK` then `JOBS_OK`.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add blackscreen_bot/jobs.py
+git add bbot/jobs.py
 git commit -m "Add JobRunner: queue, convert, upload, error mapping"
 ```
 
@@ -544,7 +544,7 @@ git commit -m "Add JobRunner: queue, convert, upload, error mapping"
 ### Task 4: Handlers (`handlers.py`)
 
 **Files:**
-- Create: `blackscreen_bot/handlers.py`
+- Create: `bbot/handlers.py`
 
 **Interfaces:**
 - Consumes: `config.Settings`, `jobs.JobRunner`, `jobs.Fetch`, `links.detect_links`, `download.download_audio` (Tasks 1–3).
@@ -555,7 +555,7 @@ git commit -m "Add JobRunner: queue, convert, upload, error mapping"
 
 - [ ] **Step 1: Create `handlers.py`**
 
-Create `blackscreen_bot/handlers.py`:
+Create `bbot/handlers.py`:
 
 ```python
 """Telegram update handlers and the authorization decorator.
@@ -573,9 +573,9 @@ from typing import Awaitable, Callable, NamedTuple
 from telegram import Message, Update
 from telegram.ext import ContextTypes
 
-from blackscreen_bot import download, links
-from blackscreen_bot.config import Settings
-from blackscreen_bot.jobs import JobRunner
+from bbot import download, links
+from bbot.config import Settings
+from bbot.jobs import JobRunner
 
 Handler = Callable[[Update, ContextTypes.DEFAULT_TYPE], Awaitable[None]]
 
@@ -661,12 +661,12 @@ def create_handlers(settings: Settings, runner: JobRunner) -> Handlers:
 - [ ] **Step 2: Verify compile + clean-env import + authorization gate**
 
 ```bash
-.venv/bin/python -m compileall -q blackscreen_bot && echo COMPILE_OK
+.venv/bin/python -m compileall -q bbot && echo COMPILE_OK
 env -u BOT_TOKEN -u ALLOWED_USER_IDS .venv/bin/python -c "
 import asyncio
 from types import SimpleNamespace
-import blackscreen_bot.handlers
-from blackscreen_bot.handlers import authorized
+import bbot.handlers
+from bbot.handlers import authorized
 
 @authorized(frozenset({1}))
 async def sample(update, ctx):
@@ -685,7 +685,7 @@ Expected: `COMPILE_OK` then `HANDLERS_OK`.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add blackscreen_bot/handlers.py
+git add bbot/handlers.py
 git commit -m "Add handlers: authorized gate, start/media/text handlers"
 ```
 
@@ -694,19 +694,19 @@ git commit -m "Add handlers: authorized gate, start/media/text handlers"
 ### Task 5: Application assembly (`app.py`, `__main__.py`)
 
 **Files:**
-- Create: `blackscreen_bot/app.py`
-- Create: `blackscreen_bot/__main__.py`
+- Create: `bbot/app.py`
+- Create: `bbot/__main__.py`
 
 **Interfaces:**
 - Consumes: `config.Settings`, `jobs.JobRunner`, `handlers.create_handlers` (Tasks 1–4).
 - Produces:
   - `app.build_application(settings: Settings) -> Application` — PTB application with all 3 handlers registered in group 0
   - `app.main() -> None` — load settings, configure logging, warn if open bot, run polling
-  - Runnable entrypoint: `python -m blackscreen_bot`
+  - Runnable entrypoint: `python -m bbot`
 
 - [ ] **Step 1: Create `app.py`**
 
-Create `blackscreen_bot/app.py`:
+Create `bbot/app.py`:
 
 ```python
 """Assemble the Telegram application and run it.
@@ -727,9 +727,9 @@ from telegram.ext import (
     filters,
 )
 
-from blackscreen_bot.config import Settings
-from blackscreen_bot.handlers import create_handlers
-from blackscreen_bot.jobs import JobRunner
+from bbot.config import Settings
+from bbot.handlers import create_handlers
+from bbot.jobs import JobRunner
 
 log = logging.getLogger("blackscreen-bot")
 
@@ -776,12 +776,12 @@ def main() -> None:
 
 - [ ] **Step 2: Create `__main__.py`**
 
-Create `blackscreen_bot/__main__.py`:
+Create `bbot/__main__.py`:
 
 ```python
-"""Entry point for `python -m blackscreen_bot`."""
+"""Entry point for `python -m bbot`."""
 
-from blackscreen_bot.app import main
+from bbot.app import main
 
 main()
 ```
@@ -789,10 +789,10 @@ main()
 - [ ] **Step 3: Verify compile + wiring check**
 
 ```bash
-.venv/bin/python -m compileall -q blackscreen_bot && echo COMPILE_OK
+.venv/bin/python -m compileall -q bbot && echo COMPILE_OK
 env -u BOT_TOKEN -u ALLOWED_USER_IDS .venv/bin/python -c "
-from blackscreen_bot.app import build_application
-from blackscreen_bot.config import Settings
+from bbot.app import build_application
+from bbot.config import Settings
 
 settings = Settings(
     bot_token='123:TEST',
@@ -816,7 +816,7 @@ Expected: `COMPILE_OK` then `WIRING_OK`.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add blackscreen_bot/app.py blackscreen_bot/__main__.py
+git add bbot/app.py bbot/__main__.py
 git commit -m "Add application assembly and python -m entrypoint"
 ```
 
@@ -831,7 +831,7 @@ git commit -m "Add application assembly and python -m entrypoint"
 
 **Interfaces:**
 - Consumes: everything from Tasks 1–5.
-- Produces: final repository state per spec (Target structure): `blackscreen_bot/`, `docs/`, `requirements.txt`, `.gitignore`, `.venv/`.
+- Produces: final repository state per spec (Target structure): `bbot/`, `docs/`, `requirements.txt`, `.gitignore`, `.venv/`.
 
 - [ ] **Step 1: Delete the old flat modules**
 
@@ -842,18 +842,18 @@ git rm bot.py processor.py main.py
 - [ ] **Step 2: Full compile + clean-env import of every module (except `__main__`, which launches the bot)**
 
 ```bash
-.venv/bin/python -m compileall -q blackscreen_bot && echo COMPILE_OK
+.venv/bin/python -m compileall -q bbot && echo COMPILE_OK
 env -u BOT_TOKEN -u ALLOWED_USER_IDS .venv/bin/python -c "
-import blackscreen_bot
-import blackscreen_bot.config
-import blackscreen_bot.errors
-import blackscreen_bot.models
-import blackscreen_bot.links
-import blackscreen_bot.download
-import blackscreen_bot.video
-import blackscreen_bot.jobs
-import blackscreen_bot.handlers
-import blackscreen_bot.app
+import bbot
+import bbot.config
+import bbot.errors
+import bbot.models
+import bbot.links
+import bbot.download
+import bbot.video
+import bbot.jobs
+import bbot.handlers
+import bbot.app
 print('ALL_IMPORTS_OK')
 "
 ```
@@ -864,16 +864,16 @@ Expected: `COMPILE_OK` then `ALL_IMPORTS_OK` — proves zero import-time side ef
 
 ```bash
 grep -rnE "^[[:space:]]*(import telegram|from telegram)" \
-  blackscreen_bot/config.py blackscreen_bot/errors.py blackscreen_bot/models.py \
-  blackscreen_bot/links.py blackscreen_bot/download.py blackscreen_bot/video.py \
+  bbot/config.py bbot/errors.py bbot/models.py \
+  bbot/links.py bbot/download.py bbot/video.py \
   && echo "FAIL: telegram in core" || echo "GATE1_OK telegram-free core"
 
-grep -rnE "os\.environ|os\.getenv|load_dotenv" blackscreen_bot --include="*.py" \
-  | grep -v "^blackscreen_bot/config.py" \
+grep -rnE "os\.environ|os\.getenv|load_dotenv" bbot --include="*.py" \
+  | grep -v "^bbot/config.py" \
   && echo "FAIL: env access outside config" || echo "GATE2_OK env only in config"
 
-grep -rnE "^[[:space:]]*(import blackscreen_bot\.[a-z_]+|from blackscreen_bot[a-z_. ]*import)" \
-  blackscreen_bot/config.py blackscreen_bot/errors.py blackscreen_bot/models.py \
+grep -rnE "^[[:space:]]*(import bbot\.[a-z_]+|from bbot[a-z_. ]*import)" \
+  bbot/config.py bbot/errors.py bbot/models.py \
   && echo "FAIL: package imports in leaf modules" || echo "GATE3_OK leaves import nothing in-package"
 ```
 
@@ -886,9 +886,9 @@ env -u BOT_TOKEN -u ALLOWED_USER_IDS .venv/bin/python -c "
 import asyncio
 from types import SimpleNamespace
 
-from blackscreen_bot.app import build_application
-from blackscreen_bot.config import Settings
-from blackscreen_bot.handlers import authorized
+from bbot.app import build_application
+from bbot.config import Settings
+from bbot.handlers import authorized
 
 settings = Settings(
     bot_token='123:TEST',
@@ -927,4 +927,4 @@ git commit -m "Remove legacy flat modules; package is now the only source"
 git log --oneline
 ```
 
-Expected: root contains `blackscreen_bot/`, `docs/`, `.gitignore`, `requirements.txt` (plus untracked `.venv/`); `git log` shows 6 commits.
+Expected: root contains `bbot/`, `docs/`, `.gitignore`, `requirements.txt` (plus untracked `.venv/`); `git log` shows 6 commits.

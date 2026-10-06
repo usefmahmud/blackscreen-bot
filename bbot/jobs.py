@@ -17,9 +17,9 @@ from telegram import Message
 from telegram.constants import ChatAction
 from telegram.error import BadRequest
 
-from blackscreen_bot.config import Settings
-from blackscreen_bot.errors import ProcessingError
-from blackscreen_bot.video import make_black_video
+from bbot.config import Settings
+from bbot.errors import ProcessingError
+from bbot.video import make_black_video
 
 log = logging.getLogger("blackscreen-bot")
 

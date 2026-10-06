@@ -16,9 +16,9 @@ from telegram.ext import (
     filters,
 )
 
-from blackscreen_bot.config import Settings
-from blackscreen_bot.handlers import create_handlers
-from blackscreen_bot.jobs import JobRunner
+from bbot.config import Settings
+from bbot.handlers import create_handlers
+from bbot.jobs import JobRunner
 
 log = logging.getLogger("blackscreen-bot")
 

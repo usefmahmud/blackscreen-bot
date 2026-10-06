@@ -1,14 +1,14 @@
 """Download the audio track of a URL with yt-dlp (blocking - run in a thread).
 
 yt_dlp is imported lazily inside download_audio(): it is a heavy dependency
-and keeping it out of module scope keeps `python -m blackscreen_bot` startup fast.
+and keeping it out of module scope keeps `python -m bbot` startup fast.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from blackscreen_bot.errors import ProcessingError
+from bbot.errors import ProcessingError
 
 
 def download_audio(

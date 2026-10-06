@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from urllib.parse import urlparse
 
-from blackscreen_bot.models import Link
+from bbot.models import Link
 
 PLATFORMS = {
     "Facebook": ("facebook.com", "fb.watch", "fb.com"),

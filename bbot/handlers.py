@@ -13,9 +13,9 @@ from typing import Awaitable, Callable, NamedTuple
 from telegram import Message, Update
 from telegram.ext import ContextTypes
 
-from blackscreen_bot import download, links
-from blackscreen_bot.config import Settings
-from blackscreen_bot.jobs import JobRunner
+from bbot import download, links
+from bbot.config import Settings
+from bbot.jobs import JobRunner
 
 Handler = Callable[[Update, ContextTypes.DEFAULT_TYPE], Awaitable[None]]
 

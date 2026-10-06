@@ -12,15 +12,15 @@ Restructure the flat scripts (`bot.py` 189 lines, `processor.py` 175 lines, empt
 
 | Decision | Choice |
 |---|---|
-| Layout | `blackscreen_bot/` package with one-concern submodules |
-| Entrypoint | `python -m blackscreen_bot` (root `main.py` deleted) |
+| Layout | `bbot/` package with one-concern submodules |
+| Entrypoint | `python -m bbot` (root `main.py` deleted) |
 | Verification | Import/compile checks only — no test suite added |
 | Config | Explicit frozen `Settings` dataclass, passed through signatures; no globals |
 
 ## Target structure
 
 ```
-blackscreen_bot/
+bbot/
   __init__.py      docstring only (package marker, no code)
   __main__.py      calls app.main()
   config.py        Settings frozen dataclass + Settings.from_env()
@@ -34,7 +34,7 @@ blackscreen_bot/
   app.py           build_application() + main()
 ```
 
-Root after migration: `blackscreen_bot/`, `docs/`, `requirements.txt`, `.venv/`. Old `bot.py`, `processor.py`, `main.py` are deleted.
+Root after migration: `bbot/`, `docs/`, `requirements.txt`, `.venv/`. Old `bot.py`, `processor.py`, `main.py` are deleted.
 
 ## Dependency rule
 
@@ -135,7 +135,7 @@ class Settings:
 ### `__main__.py`
 
 ```python
-from blackscreen_bot.app import main
+from bbot.app import main
 
 main()
 ```
@@ -159,7 +159,7 @@ User message → `authorized` gate → `runner.run(msg, fetch)` (queued status, 
 
 ## Verification
 
-1. `python -m compileall blackscreen_bot` — every file compiles.
+1. `python -m compileall bbot` — every file compiles.
 2. Import each module in a subprocess with a clean environment (no `BOT_TOKEN` set): all imports succeed with no output and no exception → proves no import-time side effects.
 3. Wiring check (script or one-liner): build a `Settings` with a dummy token and `allowed_ids=frozenset({1})`; `build_application(settings)`; assert 3 handlers registered; assert `authorized` blocks user id 2 and passes user id 1.
 4. Grep gate: no `import telegram` / `from telegram` inside `config/errors/models/links/download/video`; no module-level `os.environ` access outside `config.from_env`.
