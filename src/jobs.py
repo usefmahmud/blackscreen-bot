@@ -17,9 +17,9 @@ from telegram import Message
 from telegram.constants import ChatAction
 from telegram.error import BadRequest
 
-from bbot.config import Settings
-from bbot.errors import ProcessingError
-from bbot.video import make_black_video
+from src.config import Settings
+from src.errors import ProcessingError
+from src.video import make_black_video
 
 log = logging.getLogger("blackscreen-bot")
 
@@ -32,7 +32,7 @@ class JobRunner:
     semaphore: asyncio.Semaphore
 
     async def run(self, msg: Message, fetch: Fetch) -> None:
-        status = await msg.reply_text("⏳ Queued...", quote=True)
+        status = await msg.reply_text("⏳ Queued...", do_quote=True)
         async with self.semaphore:
             with tempfile.TemporaryDirectory(prefix="bsbot_") as t:
                 tmp = Path(t)

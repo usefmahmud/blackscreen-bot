@@ -9,8 +9,8 @@ import json
 import subprocess
 from pathlib import Path
 
-from bbot.errors import ProcessingError
-from bbot.models import MediaInfo
+from src.errors import ProcessingError
+from src.models import MediaInfo
 
 
 def probe(path: Path) -> MediaInfo:
